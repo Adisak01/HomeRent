@@ -32,6 +32,9 @@
         <!-- แสดงผลการคำนวณ -->
         <div id="result" class="mt-6 text-center text-lg hidden"></div>
 
+        <!-- แสดงเงินต้นคงเหลือ -->
+        <div id="remainingBalance" class="mt-6 text-center text-lg font-bold text-red-600"></div>
+
         <!-- กราฟ -->
         <canvas id="loanChart" class="mt-6"></canvas>
 
@@ -77,6 +80,7 @@
             document.getElementById("result").classList.remove("hidden");
 
             updateChart();
+            updateRemainingBalance();
         }
 
         function addPayment() {
@@ -103,6 +107,12 @@
 
             updateChart();
             displayPayments();
+            updateRemainingBalance();
+        }
+
+        function updateRemainingBalance() {
+            let balanceDiv = document.getElementById("remainingBalance");
+            balanceDiv.innerHTML = `💰 เงินต้นคงเหลือ: ${loanData.amount.toFixed(2)} บาท`;
         }
 
         function updateChart() {
@@ -146,6 +156,7 @@
         window.onload = function () {
             if (loanData.amount) {
                 calculateLoan();
+                updateRemainingBalance();
             }
             displayPayments();
         };
