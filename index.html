@@ -3,46 +3,42 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>เครื่องคำนวณดอกเบี้ยบ้าน</title>
+    <title>คำนวณดอกเบี้ยบ้าน</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
-            max-width: 400px;
+            max-width: 500px;
             margin: 20px auto;
             padding: 20px;
             border: 1px solid #ddd;
             border-radius: 10px;
             box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.1);
+            text-align: center;
         }
-        input {
-            width: 100%;
-            padding: 8px;
+        input, button {
+            width: 90%;
+            padding: 10px;
             margin: 5px 0;
-            border: 1px solid #ccc;
             border-radius: 5px;
         }
         button {
-            width: 100%;
-            padding: 10px;
             background-color: #28a745;
             color: white;
             border: none;
-            border-radius: 5px;
             cursor: pointer;
-            font-size: 16px;
         }
         button:hover {
             background-color: #218838;
         }
-        .result {
-            font-size: 18px;
-            font-weight: bold;
-            margin-top: 10px;
+        canvas {
+            max-width: 100%;
+            margin-top: 20px;
         }
     </style>
 </head>
 <body>
-    <h2>คำนวณค่างวดบ้าน 🏡</h2>
+    <h2>เครื่องคำนวณค่างวดบ้าน 🏡</h2>
     <label>จำนวนเงินกู้ (บาท):</label>
     <input type="number" id="loanAmount" placeholder="เช่น 2000000">
 
@@ -54,14 +50,15 @@
 
     <button onclick="calculateMortgage()">คำนวณ</button>
 
-    <p class="result" id="monthlyPayment">ค่างวดรายเดือน: - บาท</p>
+    <p id="monthlyPayment">ค่างวดรายเดือน: - บาท</p>
+    <canvas id="loanChart"></canvas>
 
     <script>
         function calculateMortgage() {
             let principal = parseFloat(document.getElementById("loanAmount").value);
             let annualRate = parseFloat(document.getElementById("interestRate").value);
             let years = parseFloat(document.getElementById("loanYears").value);
-
+            
             if (isNaN(principal) || isNaN(annualRate) || isNaN(years) || principal <= 0 || annualRate < 0 || years <= 0) {
                 document.getElementById("monthlyPayment").innerText = "กรุณากรอกข้อมูลให้ถูกต้อง!";
                 return;
@@ -69,15 +66,45 @@
 
             let monthlyRate = (annualRate / 100) / 12;
             let numPayments = years * 12;
-
             let monthlyPayment;
+            
             if (monthlyRate === 0) {
                 monthlyPayment = principal / numPayments;
             } else {
                 monthlyPayment = (principal * monthlyRate) / (1 - Math.pow(1 + monthlyRate, -numPayments));
             }
-
             document.getElementById("monthlyPayment").innerText = `ค่างวดรายเดือน: ${monthlyPayment.toLocaleString()} บาท`;
+            
+            let balance = principal;
+            let loanData = [];
+            for (let i = 1; i <= years; i++) {
+                for (let j = 0; j < 12; j++) {
+                    let interest = balance * monthlyRate;
+                    let principalPayment = monthlyPayment - interest;
+                    balance -= principalPayment;
+                }
+                loanData.push({ year: i, balance: Math.max(balance, 0) });
+            }
+            updateChart(loanData);
+        }
+        
+        function updateChart(data) {
+            let ctx = document.getElementById("loanChart").getContext("2d");
+            if (window.loanChartInstance) {
+                window.loanChartInstance.destroy();
+            }
+            window.loanChartInstance = new Chart(ctx, {
+                type: "line",
+                data: {
+                    labels: data.map(d => `ปี ${d.year}`),
+                    datasets: [{
+                        label: "ยอดเงินต้นคงเหลือ",
+                        data: data.map(d => d.balance),
+                        borderColor: "#FF5733",
+                        fill: false
+                    }]
+                }
+            });
         }
     </script>
 </body>
