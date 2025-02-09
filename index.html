@@ -31,11 +31,11 @@
     <form id="loanForm">
         <div class="mb-3">
             <label for="principal" class="form-label">จำนวนเงินกู้ (บาท)</label>
-            <input type="number" class="form-control" id="principal" required>
+            <input type="number" class="form-control" id="principal" step="0.01" required>
         </div>
         <div class="mb-3">
             <label for="annualRate" class="form-label">อัตราดอกเบี้ย (%)</label>
-            <input type="number" class="form-control" id="annualRate" required>
+            <input type="number" class="form-control" id="annualRate" step="0.01" required>
         </div>
         <div class="mb-3">
             <label for="years" class="form-label">ระยะเวลา (ปี)</label>
@@ -62,11 +62,11 @@
                 </div>
                 <div class="mb-3">
                     <label for="paymentAmount" class="form-label">จำนวนเงินที่จ่าย (บาท)</label>
-                    <input type="number" class="form-control" id="paymentAmount" required>
+                    <input type="number" class="form-control" id="paymentAmount" step="0.01" required>
                 </div>
                 <div class="mb-3">
                     <label for="principalPaid" class="form-label">ลดต้น (บาท)</label>
-                    <input type="number" class="form-control" id="principalPaid" required>
+                    <input type="number" class="form-control" id="principalPaid" step="0.01" required>
                 </div>
                 <button type="submit" class="btn btn-success">บันทึกการจ่ายเงิน</button>
             </form>
