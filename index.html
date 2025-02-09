@@ -63,124 +63,129 @@
     </div>
 
     <script>
-        let loanData = JSON.parse(localStorage.getItem("loanData")) || {};
-        let payments = JSON.parse(localStorage.getItem("payments")) || [];
-        let chart;
+    let loanData = JSON.parse(localStorage.getItem("loanData")) || {};
+    let payments = JSON.parse(localStorage.getItem("payments")) || [];
+    let chart;
 
-        function calculateLoan() {
-            let amount = parseFloat(document.getElementById("loanAmount").value);
-            let rate = parseFloat(document.getElementById("interestRate").value) / 100 / 12;
-            let months = parseFloat(document.getElementById("loanTerm").value) * 12;
+    function calculateLoan() {
+        let amount = parseFloat(document.getElementById("loanAmount").value);
+        let rate = parseFloat(document.getElementById("interestRate").value) / 100 / 12;
+        let months = parseFloat(document.getElementById("loanTerm").value) * 12;
 
-            if (isNaN(amount) || isNaN(rate) || isNaN(months)) {
-                alert("กรุณากรอกข้อมูลให้ครบถ้วน!");
-                return;
-            }
-
-            let monthlyPayment = (amount * rate) / (1 - Math.pow(1 + rate, -months));
-            loanData = { amount, rate, months, monthlyPayment };
-            localStorage.setItem("loanData", JSON.stringify(loanData));
-
-            document.getElementById("result").innerHTML = `💵 ค่างวดต่อเดือน: ${monthlyPayment.toFixed(2)} บาท`;
-            document.getElementById("result").classList.remove("hidden");
-
-            updateChart();
-            updateRemainingBalance();
+        if (isNaN(amount) || isNaN(rate) || isNaN(months)) {
+            alert("กรุณากรอกข้อมูลให้ครบถ้วน!");
+            return;
         }
 
-        function addPayment() {
-            let date = document.getElementById("paymentDate").value;
-            let amount = parseFloat(document.getElementById("paymentAmount").value);
-            let status = document.getElementById("paymentStatus").value;
+        let monthlyPayment = (amount * rate) / (1 - Math.pow(1 + rate, -months));
+        loanData = { amount, rate, months, monthlyPayment };
+        localStorage.setItem("loanData", JSON.stringify(loanData));
 
-            if (!date || isNaN(amount)) {
-                alert("กรุณากรอกข้อมูลให้ครบถ้วน!");
-                return;
-            }
+        document.getElementById("result").innerHTML = `💵 ค่างวดต่อเดือน: ${monthlyPayment.toFixed(2)} บาท`;
+        document.getElementById("result").classList.remove("hidden");
 
-            let interest = loanData.amount * loanData.rate;
-            let principal = amount - interest;
-            if (status === "extra") principal = amount;
+        updateChart();
+        updateRemainingBalance();
+    }
 
-            loanData.amount -= principal;
-            payments.push({ date, amount, status, principal, interest });
-            localStorage.setItem("loanData", JSON.stringify(loanData));
-            localStorage.setItem("payments", JSON.stringify(payments));
+    function addPayment() {
+        let date = document.getElementById("paymentDate").value;
+        let amount = parseFloat(document.getElementById("paymentAmount").value);
+        let status = document.getElementById("paymentStatus").value;
 
-            updateChart();
-            displayPayments();
-            updateRemainingBalance();
+        if (!date || isNaN(amount)) {
+            alert("กรุณากรอกข้อมูลให้ครบถ้วน!");
+            return;
         }
 
-        function updateRemainingBalance() {
-            let balanceDiv = document.getElementById("remainingBalance");
-            balanceDiv.innerHTML = `💰 เงินต้นคงเหลือ: ${loanData.amount.toFixed(2)} บาท`;
+        let interest = loanData.amount * loanData.rate;
+        let principal = amount - interest;
+
+        if (status === "extra") {
+            // ถ้าเป็น "โป๊ะ" จะหักจากเงินต้นทั้งหมด
+            principal = amount;
+            interest = 0; // ไม่มีดอกเบี้ย
         }
 
-        function updateChart() {
-            let labels = [];
-            let data = [];
-            let remaining = loanData.amount;
+        loanData.amount -= principal;
+        payments.push({ date, amount, status, principal, interest });
+        localStorage.setItem("loanData", JSON.stringify(loanData));
+        localStorage.setItem("payments", JSON.stringify(payments));
 
-            for (let i = 0; i < loanData.months; i++) {
-                labels.push(`เดือน ${i + 1}`);
-                remaining -= loanData.monthlyPayment;
-                data.push(remaining < 0 ? 0 : remaining);
-            }
+        updateChart();
+        displayPayments();
+        updateRemainingBalance();
+    }
 
+    function updateRemainingBalance() {
+        let balanceDiv = document.getElementById("remainingBalance");
+        balanceDiv.innerHTML = `💰 เงินต้นคงเหลือ: ${loanData.amount.toFixed(2)} บาท`;
+    }
+
+    function updateChart() {
+        let labels = [];
+        let data = [];
+        let remaining = loanData.amount;
+
+        for (let i = 0; i < loanData.months; i++) {
+            labels.push(`เดือน ${i + 1}`);
+            remaining -= loanData.monthlyPayment;
+            data.push(remaining < 0 ? 0 : remaining);
+        }
+
+        if (chart) chart.destroy();
+
+        let ctx = document.getElementById("loanChart").getContext("2d");
+        chart = new Chart(ctx, {
+            type: "line",
+            data: {
+                labels,
+                datasets: [{
+                    label: "เงินต้นที่เหลือ",
+                    data,
+                    borderColor: "#2563eb",
+                    fill: false,
+                    tension: 0.1
+                }]
+            },
+            options: { animation: { duration: 1500 } }
+        });
+    }
+
+    function displayPayments() {
+        let historyDiv = document.getElementById("paymentHistory");
+        historyDiv.innerHTML = `<h2 class="text-xl font-bold">📜 ประวัติการชำระเงิน</h2>`;
+        
+        payments.forEach((p, index) => {
+            historyDiv.innerHTML += `
+                <p>📅 ${p.date} - 💰 ${p.amount} บาท (${p.status === "extra" ? "โป๊ะ" : "ปกติ"})</p>
+                <p>🔻 เงินต้นลดลง: ${p.principal.toFixed(2)} บาท</p>
+                <p>💸 ดอกเบี้ยที่เสีย: ${p.interest.toFixed(2)} บาท</p>
+                <hr class="my-2">
+            `;
+        });
+    }
+
+    function clearData() {
+        if (confirm("คุณแน่ใจหรือไม่ว่าต้องการล้างข้อมูลทั้งหมด?")) {
+            localStorage.clear();
+            loanData = {};
+            payments = [];
+            document.getElementById("paymentHistory").innerHTML = "";
+            document.getElementById("remainingBalance").innerHTML = "";
+            document.getElementById("result").classList.add("hidden");
             if (chart) chart.destroy();
-
-            let ctx = document.getElementById("loanChart").getContext("2d");
-            chart = new Chart(ctx, {
-                type: "line",
-                data: {
-                    labels,
-                    datasets: [{
-                        label: "เงินต้นที่เหลือ",
-                        data,
-                        borderColor: "#2563eb",
-                        fill: false,
-                        tension: 0.1
-                    }]
-                },
-                options: { animation: { duration: 1500 } }
-            });
+            alert("ล้างข้อมูลเรียบร้อย!");
         }
+    }
 
-        function displayPayments() {
-            let historyDiv = document.getElementById("paymentHistory");
-            historyDiv.innerHTML = `<h2 class="text-xl font-bold">📜 ประวัติการชำระเงิน</h2>`;
-            
-            payments.forEach((p, index) => {
-                historyDiv.innerHTML += `
-                    <p>📅 ${p.date} - 💰 ${p.amount} บาท (${p.status === "extra" ? "โป๊ะ" : "ปกติ"})</p>
-                    <p>🔻 เงินต้นลดลง: ${p.principal.toFixed(2)} บาท</p>
-                    <p>💸 ดอกเบี้ยที่เสีย: ${p.interest.toFixed(2)} บาท</p>
-                    <hr class="my-2">
-                `;
-            });
+    window.onload = function () {
+        if (loanData.amount) {
+            calculateLoan();
+            updateRemainingBalance();
         }
-
-        function clearData() {
-            if (confirm("คุณแน่ใจหรือไม่ว่าต้องการล้างข้อมูลทั้งหมด?")) {
-                localStorage.clear();
-                loanData = {};
-                payments = [];
-                document.getElementById("paymentHistory").innerHTML = "";
-                document.getElementById("remainingBalance").innerHTML = "";
-                document.getElementById("result").classList.add("hidden");
-                if (chart) chart.destroy();
-                alert("ล้างข้อมูลเรียบร้อย!");
-            }
-        }
-
-        window.onload = function () {
-            if (loanData.amount) {
-                calculateLoan();
-                updateRemainingBalance();
-            }
-            displayPayments();
-        };
-    </script>
+        displayPayments();
+    };
+</script>
 </body>
 </html>
