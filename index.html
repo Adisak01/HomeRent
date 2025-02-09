@@ -29,31 +29,54 @@
 <body>
 
 <div class="container">
-    <h2 class="text-center">บันทึกการชำระเงิน</h2>
-    
-    <!-- ฟอร์มการจ่ายเงิน -->
+    <!-- ส่วนของการคำนวณเงินกู้ -->
+    <h2 class="text-center">คำนวณการชำระเงินเงินกู้</h2>
+    <div class="card mt-4">
+        <div class="card-body">
+            <h5><i class="fas fa-calculator"></i> คำนวณเงินกู้</h5>
+            <form id="loanForm">
+                <div class="mb-3">
+                    <label for="loanAmount" class="form-label">จำนวนเงินกู้ (บาท)</label>
+                    <input type="number" class="form-control" id="loanAmount" required>
+                </div>
+                <div class="mb-3">
+                    <label for="interestRate" class="form-label">อัตราดอกเบี้ย (%)</label>
+                    <input type="number" class="form-control" id="interestRate" required step="0.01">
+                </div>
+                <div class="mb-3">
+                    <label for="loanTerm" class="form-label">ระยะเวลาผ่อน (ปี)</label>
+                    <input type="number" class="form-control" id="loanTerm" required>
+                </div>
+                <button type="submit" class="btn btn-custom w-100">คำนวณ <i class="fas fa-calculator icon"></i></button>
+            </form>
+        </div>
+    </div>
+    <div id="loanResults" class="mt-4"></div>
+
+    <!-- ส่วนของการบันทึกการชำระเงิน -->
+    <h2 class="text-center mt-5">บันทึกการชำระเงิน</h2>
     <div class="card mt-4">
         <div class="card-body">
             <h5><i class="fas fa-dollar-sign"></i> กรอกการจ่ายเงิน</h5>
             <form id="paymentForm">
                 <div class="mb-3">
-                    <label for="paymentDate" class="form-label">วันที่จ่ายเงิน <i class="fas fa-calendar-day icon"></i></label>
+                    <label for="paymentDate" class="form-label">วันที่จ่ายเงิน <i class="fas fa-calendar-day"></i></label>
                     <input type="date" class="form-control" id="paymentDate" required>
                 </div>
                 <div class="mb-3">
-                    <label for="paymentAmount" class="form-label">จำนวนเงินที่จ่าย (บาท) <i class="fas fa-credit-card icon"></i></label>
+                    <label for="paymentAmount" class="form-label">จำนวนเงินที่จ่าย (บาท) <i class="fas fa-credit-card"></i></label>
                     <input type="number" class="form-control" id="paymentAmount" step="0.01" required placeholder="กรอกจำนวนเงินที่จ่าย">
                 </div>
                 <div class="mb-3">
-                    <label for="principalPaid" class="form-label">ลดต้น (บาท) <i class="fas fa-arrow-down icon"></i></label>
+                    <label for="principalPaid" class="form-label">ลดต้น (บาท) <i class="fas fa-arrow-down"></i></label>
                     <input type="number" class="form-control" id="principalPaid" step="0.01" required placeholder="กรอกจำนวนที่ลดต้น">
                 </div>
-                <button type="submit" class="btn btn-custom w-100">บันทึกการจ่ายเงิน <i class="fas fa-save icon"></i></button>
+                <button type="submit" class="btn btn-custom w-100">บันทึกการจ่ายเงิน <i class="fas fa-save"></i></button>
             </form>
         </div>
     </div>
 
-    <!-- ประวัติการจ่ายเงิน -->
+    <!-- ตารางประวัติการจ่ายเงิน -->
     <div id="paymentHistory" class="mt-4">
         <h4>ประวัติการจ่ายเงิน</h4>
         <table class="table table-bordered">
@@ -70,9 +93,28 @@
 </div>
 
 <script>
-    let payments = JSON.parse(localStorage.getItem('payments')) || [];
+    // ฟังก์ชันคำนวณเงินกู้
+    document.getElementById('loanForm').addEventListener('submit', function(event) {
+        event.preventDefault();
+        const loanAmount = parseFloat(document.getElementById('loanAmount').value);
+        const interestRate = parseFloat(document.getElementById('interestRate').value) / 100;
+        const loanTerm = parseFloat(document.getElementById('loanTerm').value);
+
+        const monthlyInterestRate = interestRate / 12;
+        const numberOfPayments = loanTerm * 12;
+        const monthlyPayment = loanAmount * monthlyInterestRate / (1 - Math.pow(1 + monthlyInterestRate, -numberOfPayments));
+
+        const loanResults = document.getElementById('loanResults');
+        loanResults.innerHTML = `
+            <h5>ผลคำนวณการชำระเงิน:</h5>
+            <p><strong>การชำระเงินรายเดือน:</strong> ฿${monthlyPayment.toFixed(2)}</p>
+            <p><strong>รวมทั้งหมด (รวมดอกเบี้ย):</strong> ฿${(monthlyPayment * numberOfPayments).toFixed(2)}</p>
+        `;
+    });
 
     // ฟังก์ชันบันทึกการจ่ายเงิน
+    let payments = JSON.parse(localStorage.getItem('payments')) || [];
+
     document.getElementById('paymentForm').addEventListener('submit', function(event) {
         event.preventDefault();
 
@@ -93,6 +135,7 @@
         document.getElementById('paymentForm').reset();
     });
 
+    // แสดงประวัติการจ่ายเงิน
     if (payments.length > 0) {
         const paymentHistoryTable = document.getElementById('paymentHistoryTable');
         payments.forEach(payment => {
@@ -106,5 +149,6 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.min.js"></script>
+
 </body>
 </html>
