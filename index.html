@@ -55,6 +55,7 @@
     <input type="number" id="loanYears" placeholder="ระยะเวลากู้ (ปี)">
     <button onclick="calculateMortgage()">คำนวณ</button>
     <p id="monthlyPayment">ค่างวดรายเดือน: - บาท</p>
+    <p id="remainingBalance">เงินต้นคงเหลือ: - บาท</p>
     <canvas id="loanChart"></canvas>
     
     <h3>บันทึกการจ่ายเงิน</h3>
@@ -67,7 +68,8 @@
     </div>
 
     <script>
-        let payments = [];
+        let payments = JSON.parse(localStorage.getItem("payments")) || [];
+        let remainingBalance = parseFloat(localStorage.getItem("remainingBalance")) || 0;
 
         function calculateMortgage() {
             let principal = parseFloat(document.getElementById("loanAmount").value);
@@ -84,15 +86,18 @@
             let monthlyPayment = (principal * monthlyRate) / (1 - Math.pow(1 + monthlyRate, -numPayments));
             document.getElementById("monthlyPayment").innerText = `ค่างวดรายเดือน: ${monthlyPayment.toLocaleString()} บาท`;
             
-            let balance = principal;
+            remainingBalance = principal;
+            localStorage.setItem("remainingBalance", remainingBalance);
+            document.getElementById("remainingBalance").innerText = `เงินต้นคงเหลือ: ${remainingBalance.toLocaleString()} บาท`;
+            
             let loanData = [];
             for (let i = 1; i <= years; i++) {
                 for (let j = 0; j < 12; j++) {
-                    let interest = balance * monthlyRate;
+                    let interest = remainingBalance * monthlyRate;
                     let principalPayment = monthlyPayment - interest;
-                    balance -= principalPayment;
+                    remainingBalance -= principalPayment;
                 }
-                loanData.push({ year: i, balance: Math.max(balance, 0) });
+                loanData.push({ year: i, balance: Math.max(remainingBalance, 0) });
             }
             updateChart(loanData);
         }
@@ -106,7 +111,13 @@
                 return;
             }
             
+            remainingBalance -= amount;
+            if (remainingBalance < 0) remainingBalance = 0;
+            localStorage.setItem("remainingBalance", remainingBalance);
+            document.getElementById("remainingBalance").innerText = `เงินต้นคงเหลือ: ${remainingBalance.toLocaleString()} บาท`;
+            
             payments.push({ date, amount });
+            localStorage.setItem("payments", JSON.stringify(payments));
             updateHistory();
         }
 
@@ -138,6 +149,9 @@
                 }
             });
         }
+
+        document.getElementById("remainingBalance").innerText = `เงินต้นคงเหลือ: ${remainingBalance.toLocaleString()} บาท`;
+        updateHistory();
     </script>
 </body>
 </html>
