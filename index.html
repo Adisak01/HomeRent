@@ -55,6 +55,11 @@
         <!-- ประวัติการชำระเงิน -->
         <div id="paymentHistory" class="mt-6"></div>
 
+        <!-- ปุ่มเคลียร์ข้อมูล -->
+        <button onclick="clearData()" class="w-full bg-red-500 text-white py-2 rounded mt-4 hover:bg-red-600 transition">
+            ล้างข้อมูลทั้งหมด
+        </button>
+
     </div>
 
     <script>
@@ -93,15 +98,12 @@
                 return;
             }
 
-            if (status === "extra") {
-                loanData.amount -= amount;
-            } else {
-                let interest = loanData.amount * loanData.rate;
-                let principal = amount - interest;
-                loanData.amount -= principal;
-            }
+            let interest = loanData.amount * loanData.rate;
+            let principal = amount - interest;
+            if (status === "extra") principal = amount;
 
-            payments.push({ date, amount, status });
+            loanData.amount -= principal;
+            payments.push({ date, amount, status, principal, interest });
             localStorage.setItem("loanData", JSON.stringify(loanData));
             localStorage.setItem("payments", JSON.stringify(payments));
 
@@ -148,9 +150,28 @@
         function displayPayments() {
             let historyDiv = document.getElementById("paymentHistory");
             historyDiv.innerHTML = `<h2 class="text-xl font-bold">📜 ประวัติการชำระเงิน</h2>`;
-            payments.forEach(p => {
-                historyDiv.innerHTML += `<p>📅 ${p.date} - 💰 ${p.amount} บาท (${p.status === "extra" ? "โป๊ะ" : "ปกติ"})</p>`;
+            
+            payments.forEach((p, index) => {
+                historyDiv.innerHTML += `
+                    <p>📅 ${p.date} - 💰 ${p.amount} บาท (${p.status === "extra" ? "โป๊ะ" : "ปกติ"})</p>
+                    <p>🔻 เงินต้นลดลง: ${p.principal.toFixed(2)} บาท</p>
+                    <p>💸 ดอกเบี้ยที่เสีย: ${p.interest.toFixed(2)} บาท</p>
+                    <hr class="my-2">
+                `;
             });
+        }
+
+        function clearData() {
+            if (confirm("คุณแน่ใจหรือไม่ว่าต้องการล้างข้อมูลทั้งหมด?")) {
+                localStorage.clear();
+                loanData = {};
+                payments = [];
+                document.getElementById("paymentHistory").innerHTML = "";
+                document.getElementById("remainingBalance").innerHTML = "";
+                document.getElementById("result").classList.add("hidden");
+                if (chart) chart.destroy();
+                alert("ล้างข้อมูลเรียบร้อย!");
+            }
         }
 
         window.onload = function () {
