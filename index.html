@@ -4,154 +4,206 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>คำนวณดอกเบี้ยบ้าน</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 600px;
-            margin: 20px auto;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-            background: #f8f9fa;
-            text-align: center;
+        .container {
+            max-width: 900px;
+            margin-top: 50px;
         }
-        input, button {
-            width: 90%;
-            padding: 10px;
-            margin: 5px 0;
-            border-radius: 5px;
-            border: 1px solid #ccc;
-            font-size: 16px;
+        .card {
+            margin-bottom: 20px;
         }
-        button {
-            background-color: #007bff;
-            color: white;
-            border: none;
-            cursor: pointer;
-            font-size: 18px;
+        .result, .payment-history {
+            display: none;
         }
-        button:hover {
-            background-color: #0056b3;
-        }
-        .history {
-            margin-top: 20px;
-            text-align: left;
-            background: white;
-            padding: 10px;
-            border-radius: 5px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-        canvas {
-            max-width: 100%;
-            margin-top: 20px;
+        .form-control {
+            margin-bottom: 10px;
         }
     </style>
 </head>
 <body>
-    <h2>เครื่องคำนวณค่างวดบ้าน 🏡</h2>
-    <input type="number" id="loanAmount" placeholder="จำนวนเงินกู้ (บาท)">
-    <input type="number" id="interestRate" placeholder="อัตราดอกเบี้ยต่อปี (%)">
-    <input type="number" id="loanYears" placeholder="ระยะเวลากู้ (ปี)">
-    <button onclick="calculateMortgage()">คำนวณ</button>
-    <p id="monthlyPayment">ค่างวดรายเดือน: - บาท</p>
-    <p id="remainingBalance">เงินต้นคงเหลือ: - บาท</p>
-    <canvas id="loanChart"></canvas>
+
+<div class="container">
+    <h2 class="text-center">คำนวณดอกเบี้ยบ้าน</h2>
     
-    <h3>บันทึกการจ่ายเงิน</h3>
-    <input type="date" id="paymentDate">
-    <input type="number" id="paymentAmount" placeholder="จำนวนเงินที่จ่าย (บาท)">
-    <button onclick="recordPayment()">บันทึกการจ่ายเงิน</button>
-    <div class="history" id="paymentHistory">
-        <h4>ประวัติการจ่ายเงิน</h4>
-        <ul id="historyList"></ul>
+    <!-- ฟอร์มคำนวณเงินกู้ -->
+    <form id="loanForm">
+        <div class="mb-3">
+            <label for="principal" class="form-label">จำนวนเงินกู้ (บาท)</label>
+            <input type="number" class="form-control" id="principal" required>
+        </div>
+        <div class="mb-3">
+            <label for="annualRate" class="form-label">อัตราดอกเบี้ย (%)</label>
+            <input type="number" class="form-control" id="annualRate" required>
+        </div>
+        <div class="mb-3">
+            <label for="years" class="form-label">ระยะเวลา (ปี)</label>
+            <input type="number" class="form-control" id="years" required>
+        </div>
+        <button type="submit" class="btn btn-primary">คำนวณ</button>
+    </form>
+
+    <!-- ผลลัพธ์การคำนวณ -->
+    <div id="result" class="mt-4 result">
+        <h4>ผลลัพธ์:</h4>
+        <p id="totalInterest"></p>
+        <p id="emi"></p>
     </div>
 
-    <script>
-        let payments = JSON.parse(localStorage.getItem("payments")) || [];
-        let remainingBalance = parseFloat(localStorage.getItem("remainingBalance")) || 0;
+    <!-- ฟอร์มการจ่ายเงิน -->
+    <div class="card mt-4 result">
+        <div class="card-body">
+            <h5>กรอกการจ่ายเงิน</h5>
+            <form id="paymentForm">
+                <div class="mb-3">
+                    <label for="paymentDate" class="form-label">วันที่จ่ายเงิน</label>
+                    <input type="date" class="form-control" id="paymentDate" required>
+                </div>
+                <div class="mb-3">
+                    <label for="paymentAmount" class="form-label">จำนวนเงินที่จ่าย (บาท)</label>
+                    <input type="number" class="form-control" id="paymentAmount" required>
+                </div>
+                <div class="mb-3">
+                    <label for="principalPaid" class="form-label">ลดต้น (บาท)</label>
+                    <input type="number" class="form-control" id="principalPaid" required>
+                </div>
+                <button type="submit" class="btn btn-success">บันทึกการจ่ายเงิน</button>
+            </form>
+        </div>
+    </div>
 
-        function calculateMortgage() {
-            let principal = parseFloat(document.getElementById("loanAmount").value);
-            let annualRate = parseFloat(document.getElementById("interestRate").value);
-            let years = parseFloat(document.getElementById("loanYears").value);
-            
-            if (isNaN(principal) || isNaN(annualRate) || isNaN(years) || principal <= 0 || annualRate < 0 || years <= 0) {
-                document.getElementById("monthlyPayment").innerText = "กรุณากรอกข้อมูลให้ถูกต้อง!";
-                return;
-            }
+    <!-- ประวัติการจ่ายเงิน -->
+    <div id="paymentHistory" class="mt-4 payment-history">
+        <h4>ประวัติการจ่ายเงิน</h4>
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>วันที่</th>
+                    <th>จำนวนเงินที่จ่าย (บาท)</th>
+                    <th>ลดต้น (บาท)</th>
+                </tr>
+            </thead>
+            <tbody id="paymentHistoryTable"></tbody>
+        </table>
+    </div>
 
-            let monthlyRate = (annualRate / 100) / 12;
-            let numPayments = years * 12;
-            let monthlyPayment = (principal * monthlyRate) / (1 - Math.pow(1 + monthlyRate, -numPayments));
-            document.getElementById("monthlyPayment").innerText = `ค่างวดรายเดือน: ${monthlyPayment.toLocaleString()} บาท`;
-            
-            remainingBalance = principal;
-            localStorage.setItem("remainingBalance", remainingBalance);
-            document.getElementById("remainingBalance").innerText = `เงินต้นคงเหลือ: ${remainingBalance.toLocaleString()} บาท`;
-            
-            let loanData = [];
-            for (let i = 1; i <= years; i++) {
-                for (let j = 0; j < 12; j++) {
-                    let interest = remainingBalance * monthlyRate;
-                    let principalPayment = monthlyPayment - interest;
-                    remainingBalance -= principalPayment;
+    <!-- กราฟการชำระเงิน -->
+    <div class="mt-4 result">
+        <h4>กราฟการจ่ายเงิน</h4>
+        <canvas id="paymentChart"></canvas>
+    </div>
+
+</div>
+
+<script>
+    let payments = JSON.parse(localStorage.getItem('payments')) || [];  // ดึงข้อมูลการจ่ายจาก localStorage
+    let principalRemaining = parseFloat(localStorage.getItem('principalRemaining')) || 0;
+
+    // ฟังก์ชันการคำนวณและแสดงผลลัพธ์
+    document.getElementById('loanForm').addEventListener('submit', function(event) {
+        event.preventDefault();
+        
+        // รับค่าจากฟอร์มคำนวณ
+        const principal = parseFloat(document.getElementById('principal').value);
+        const annualRate = parseFloat(document.getElementById('annualRate').value);
+        const years = parseInt(document.getElementById('years').value);
+
+        // คำนวณดอกเบี้ยรวม
+        const interest = principal * (annualRate / 100) * years;
+        const monthlyRate = (annualRate / 100) / 12;
+        const months = years * 12;
+        const emi = (principal * monthlyRate * Math.pow(1 + monthlyRate, months)) / (Math.pow(1 + monthlyRate, months) - 1);
+
+        // แสดงผลลัพธ์
+        document.getElementById('totalInterest').innerText = `ดอกเบี้ยรวมที่ต้องจ่าย: ${interest.toFixed(2)} บาท`;
+        document.getElementById('emi').innerText = `การผ่อนชำระต่อเดือน (EMI): ${emi.toFixed(2)} บาท`;
+
+        // เก็บข้อมูลเงินต้นที่เหลือ
+        principalRemaining = principal;
+
+        // บันทึกข้อมูลใน localStorage
+        localStorage.setItem('principalRemaining', principalRemaining);
+
+        // แสดงผลลัพธ์และฟอร์มการจ่ายเงิน
+        document.getElementById('result').style.display = 'block';
+        document.getElementById('paymentForm').style.display = 'block';
+        document.getElementById('paymentHistory').style.display = 'block';
+
+        // บันทึกข้อมูลการคำนวณใน localStorage
+        localStorage.setItem('principal', principal);
+        localStorage.setItem('annualRate', annualRate);
+        localStorage.setItem('years', years);
+    });
+
+    // ฟังก์ชันบันทึกการจ่ายเงิน
+    document.getElementById('paymentForm').addEventListener('submit', function(event) {
+        event.preventDefault();
+
+        const paymentDate = document.getElementById('paymentDate').value;
+        const paymentAmount = parseFloat(document.getElementById('paymentAmount').value);
+        const principalPaid = parseFloat(document.getElementById('principalPaid').value);
+
+        // ลดต้น
+        principalRemaining -= principalPaid;
+
+        // เพิ่มการจ่ายลงในประวัติ
+        payments.push({ date: paymentDate, amount: paymentAmount, principalPaid: principalPaid });
+
+        // แสดงประวัติการจ่ายเงิน
+        const paymentHistoryTable = document.getElementById('paymentHistoryTable');
+        const row = paymentHistoryTable.insertRow();
+        row.insertCell(0).textContent = paymentDate;
+        row.insertCell(1).textContent = paymentAmount.toFixed(2);
+        row.insertCell(2).textContent = principalPaid.toFixed(2);
+
+        // อัพเดตกราฟการจ่ายเงิน
+        updatePaymentChart();
+
+        // บันทึกข้อมูลการจ่ายลงใน localStorage
+        localStorage.setItem('payments', JSON.stringify(payments));
+        localStorage.setItem('principalRemaining', principalRemaining);
+
+        // ล้างฟอร์ม
+        document.getElementById('paymentForm').reset();
+    });
+
+    // ฟังก์ชันอัพเดตกราฟการจ่ายเงิน
+    function updatePaymentChart() {
+        const paymentDates = payments.map(payment => payment.date);
+        const paymentAmounts = payments.map(payment => payment.amount);
+        
+        const ctx = document.getElementById('paymentChart').getContext('2d');
+        const paymentChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: paymentDates,
+                datasets: [{
+                    label: 'การจ่ายเงิน (บาท)',
+                    data: paymentAmounts,
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    fill: false,
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    x: { title: { display: true, text: 'วันที่' } },
+                    y: { title: { display: true, text: 'จำนวนเงิน (บาท)' } }
                 }
-                loanData.push({ year: i, balance: Math.max(remainingBalance, 0) });
             }
-            updateChart(loanData);
-        }
+        });
+    }
 
-        function recordPayment() {
-            let date = document.getElementById("paymentDate").value;
-            let amount = parseFloat(document.getElementById("paymentAmount").value);
-            
-            if (!date || isNaN(amount) || amount <= 0) {
-                alert("กรุณากรอกข้อมูลให้ถูกต้อง!");
-                return;
-            }
-            
-            remainingBalance -= amount;
-            if (remainingBalance < 0) remainingBalance = 0;
-            localStorage.setItem("remainingBalance", remainingBalance);
-            document.getElementById("remainingBalance").innerText = `เงินต้นคงเหลือ: ${remainingBalance.toLocaleString()} บาท`;
-            
-            payments.push({ date, amount });
-            localStorage.setItem("payments", JSON.stringify(payments));
-            updateHistory();
-        }
+    // เรียกใช้ฟังก์ชันอัพเดตกราฟเมื่อโหลดหน้า
+    if (payments.length > 0) {
+        updatePaymentChart();
+        document.getElementById('paymentHistory').style.display = 'block';
+    }
 
-        function updateHistory() {
-            let historyList = document.getElementById("historyList");
-            historyList.innerHTML = "";
-            payments.forEach(payment => {
-                let listItem = document.createElement("li");
-                listItem.textContent = `วันที่ ${payment.date} - จ่าย ${payment.amount.toLocaleString()} บาท`;
-                historyList.appendChild(listItem);
-            });
-        }
+</script>
 
-        function updateChart(data) {
-            let ctx = document.getElementById("loanChart").getContext("2d");
-            if (window.loanChartInstance) {
-                window.loanChartInstance.destroy();
-            }
-            window.loanChartInstance = new Chart(ctx, {
-                type: "line",
-                data: {
-                    labels: data.map(d => `ปี ${d.year}`),
-                    datasets: [{
-                        label: "ยอดเงินต้นคงเหลือ",
-                        data: data.map(d => d.balance),
-                        borderColor: "#FF5733",
-                        fill: false
-                    }]
-                }
-            });
-        }
-
-        document.getElementById("remainingBalance").innerText = `เงินต้นคงเหลือ: ${remainingBalance.toLocaleString()} บาท`;
-        updateHistory();
-    </script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.min.js"></script>
 </body>
 </html>
